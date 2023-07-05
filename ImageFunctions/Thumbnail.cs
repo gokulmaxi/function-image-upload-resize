@@ -73,42 +73,55 @@ namespace ImageFunctions
         [FunctionName("Thumbnail")]
         public static async Task Run(
             [EventGridTrigger]EventGridEvent eventGridEvent,
-            [Blob("{data.url}", FileAccess.Read)] Stream input,
             ILogger log)
         {
             try
             {
-                if (input != null)
-                {
+                    var accountName = Environment.GetEnvironmentVariable("ACCOUNT_NAME");
+                    var accountKey = Environment.GetEnvironmentVariable("ACCOUNT_KEY");
+                    var thumbnailWidth = Convert.ToInt32(Environment.GetEnvironmentVariable("THUMBNAIL_WIDTH"));
+                    var thumbContainerName = Environment.GetEnvironmentVariable("THUMBNAIL_CONTAINER_NAME");
+                    var imageContainerName = Environment.GetEnvironmentVariable("IMAGE_CONTAINER_NAME");
                     var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var extension = Path.GetExtension(createdEvent.Url);
                     var encoder = GetEncoder(extension);
-
+                    var thumbUri = createdEvent.Url.Replace(imageContainerName)
                     if (encoder != null)
                     {
-                        var thumbnailWidth = Convert.ToInt32(Environment.GetEnvironmentVariable("THUMBNAIL_WIDTH"));
-                        var thumbContainerName = Environment.GetEnvironmentVariable("THUMBNAIL_CONTAINER_NAME");
+
                         var blobServiceClient = new BlobServiceClient(BLOB_STORAGE_CONNECTION_STRING);
                         var blobContainerClient = blobServiceClient.GetBlobContainerClient(thumbContainerName);
                         var blobName = GetBlobNameFromUrl(createdEvent.Url);
 
-                        using (var output = new MemoryStream())
-                        using (Image<Rgba32> image = Image.Load(input))
-                        {
-                            var divisor = image.Width / thumbnailWidth;
-                            var height = Convert.ToInt32(Math.Round((decimal)(image.Height / divisor)));
+                        var imageStream = new MemoryStream();
+                        var resizedImageStream = new MemoryStream();
+                        await blobClient.DownloadToAsync(imageStream);
+                        log.LogInformation($"Resizeing image from {createdEvent.Uri}");
+                        // Read the image using SixLabors.ImageSharp
+                        imageStream.Position= 0;
+                        var image = Image.Load(imageStream);
 
-                            image.Mutate(x => x.Resize(thumbnailWidth, height));
-                            image.Save(output, encoder);
-                            output.Position = 0;
-                            await blobContainerClient.UploadBlobAsync(blobName, output);
-                        }
+                        var divisor = image.Width / thumbnailWidth;
+                        var height = Convert.ToInt32(Math.Round((decimal)(image.Height / divisor)));
+                        image.Mutate(x => x.Resize(thumbnailWidth, height));
+                        image.Save(resizedImageStream, encoder);
+                        resizedImageStream.Position = 0;
+                        log.LogInformation($"Uploading thumb to {thumbUri}");
+                        Uri blobUri = new Uri(thumbUri);
+
+                        StorageSharedKeyCredential storageCredentials =
+                            new StorageSharedKeyCredential(AccountName, AccountKey);
+
+                        // Create the blob client.
+                        BlobClient blobClient2 = new BlobClient(blobUri, storageCredentials);
+
+                        // Upload the file
+                        await blobClient2.UploadAsync(resizedImageStream);
                     }
                     else
                     {
                         log.LogInformation($"No encoder support for: {createdEvent.Url}");
                     }
-                }
             }
             catch (Exception ex)
             {

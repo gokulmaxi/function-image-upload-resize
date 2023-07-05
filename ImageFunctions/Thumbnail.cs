@@ -99,7 +99,7 @@ namespace ImageFunctions
                         var imageStream = new MemoryStream();
                         var resizedImageStream = new MemoryStream();
                         await blobClient.DownloadToAsync(imageStream);
-                        log.LogInformation($"Resizeing image from {createdEvent.Uri}");
+                        log.LogInformation($"Resizeing image from {createdEvent.Url}");
                         // Read the image using SixLabors.ImageSharp
                         imageStream.Position= 0;
                         var image = Image.Load(imageStream);

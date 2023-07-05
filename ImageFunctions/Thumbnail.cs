@@ -85,7 +85,7 @@ namespace ImageFunctions
                     var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var extension = Path.GetExtension(createdEvent.Url);
                     var encoder = GetEncoder(extension);
-                    var thumbUri = createdEvent.Url.Replace(imageContainerName)
+                    var thumbUri = createdEvent.Url.Replace(imageContainerName);
                     if (encoder != null)
                     {
 

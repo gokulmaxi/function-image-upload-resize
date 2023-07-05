@@ -74,19 +74,20 @@ namespace ImageFunctions
         [FunctionName("Thumbnail")]
         public static async Task Run(
             [EventGridTrigger]EventGridEvent eventGridEvent,
+            [Blob("{data.url}", FileAccess.Read)] Stream input,
             ILogger log)
         {
             try
             {
+                    var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var accountName = Environment.GetEnvironmentVariable("ACCOUNT_NAME");
                     var accountKey = Environment.GetEnvironmentVariable("ACCOUNT_KEY");
                     var thumbnailWidth = Convert.ToInt32(Environment.GetEnvironmentVariable("THUMBNAIL_WIDTH"));
                     var thumbContainerName = Environment.GetEnvironmentVariable("THUMBNAIL_CONTAINER_NAME");
                     var imageContainerName = Environment.GetEnvironmentVariable("IMAGE_CONTAINER_NAME");
-                    var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var extension = Path.GetExtension(createdEvent.Url);
                     var encoder = GetEncoder(extension);
-                    var blobClient = new BlobClient(new Uri(CreatedEvent.Url));
+                    var blobClient = new BlobClient(new Uri(createdEvent.Url));
                     var thumbUri = createdEvent.Url.Replace(imageContainerName,thumbContainerName);
                     if (encoder != null)
                     {

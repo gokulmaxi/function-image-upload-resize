@@ -8,6 +8,7 @@
 //   https://{ID}.ngrok.io/runtime/webhooks/EventGrid?functionName=Thumbnail
 
 using Azure.Storage.Blobs;
+using Azure.Storage;
 using Microsoft.Azure.EventGrid.Models;
 using Microsoft.Azure.WebJobs;
 using Microsoft.Azure.WebJobs.Extensions.EventGrid;
@@ -85,6 +86,7 @@ namespace ImageFunctions
                     var createdEvent = ((JObject)eventGridEvent.Data).ToObject<StorageBlobCreatedEventData>();
                     var extension = Path.GetExtension(createdEvent.Url);
                     var encoder = GetEncoder(extension);
+                    var blobClient = new BlobClient(new Uri(reatedEvent.Url));
                     var thumbUri = createdEvent.Url.Replace(imageContainerName);
                     if (encoder != null)
                     {
@@ -110,7 +112,7 @@ namespace ImageFunctions
                         Uri blobUri = new Uri(thumbUri);
 
                         StorageSharedKeyCredential storageCredentials =
-                            new StorageSharedKeyCredential(AccountName, AccountKey);
+                            new StorageSharedKeyCredential(accountName, accountKey);
 
                         // Create the blob client.
                         BlobClient blobClient2 = new BlobClient(blobUri, storageCredentials);
